@@ -9,7 +9,40 @@ void mck::from_json(const nlohmann::json &j, Connection &c)
     c.name = j.at("name").get<std::string>();
 }
 
-bool mck::GetConnections(jack_client_t *client, jack_port_t *port, std::vector<Connection> &connections)
+bool mck::NewConnections(jack_client_t *client, jack_port_t *port, std::vector<std::string> &connections)
+{
+    std::vector<std::string> tmp;
+    if (client == nullptr || port == nullptr)
+    {
+        return false;
+    }
+    const char **cons = jack_port_get_all_connections(client, port);
+    if (cons)
+    {
+        const char **con = cons;
+        for (; *con; con++)
+        {
+            tmp.push_back(std::string(*con));
+        }
+        jack_free(cons);
+    }
+
+    // Compare connections
+    if (connections.size() != tmp.size()) {
+        return true;
+    }
+    std::sort(connections.begin(), connections.end());
+    std::sort(tmp.begin(), tmp.end());
+    for (unsigned i = 0; i < tmp.size(); i++)
+    {
+        if (connections[i] != tmp[i]) {
+            return true;
+        }
+    }
+
+    return false;
+}
+bool mck::GetConnections(jack_client_t *client, jack_port_t *port, std::vector<std::string> &connections)
 {
     connections.clear();
 
@@ -20,12 +53,10 @@ bool mck::GetConnections(jack_client_t *client, jack_port_t *port, std::vector<C
     const char **cons = jack_port_get_all_connections(client, port);
     if (cons)
     {
-        Connection connection;
         const char **con = cons;
         for (; *con; con++)
         {
-            connection.name = std::string(*con);
-            connections.push_back(connection);
+            connections.push_back(std::string(*con));
         }
         jack_free(cons);
     }
@@ -33,7 +64,7 @@ bool mck::GetConnections(jack_client_t *client, jack_port_t *port, std::vector<C
     return true;
 }
 
-bool mck::SetConnections(jack_client_t *client, jack_port_t *port, std::vector<Connection> &connections, bool isInput)
+bool mck::SetConnections(jack_client_t *client, jack_port_t *port, std::vector<std::string> &connections, bool isInput)
 {
     if (client == nullptr || port == nullptr)
     {
@@ -49,9 +80,9 @@ bool mck::SetConnections(jack_client_t *client, jack_port_t *port, std::vector<C
     for (auto &c : connections)
     {
         if (isInput) {
-            ret &= (jack_connect(client, c.name.c_str(), name) == 0);
+            ret &= (jack_connect(client, c.c_str(), name) == 0);
         } else {
-            ret &= (jack_connect(client, name, c.name.c_str()) == 0);
+            ret &= (jack_connect(client, name, c.c_str()) == 0);
         }
     }
 

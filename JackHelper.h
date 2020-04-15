@@ -16,6 +16,7 @@ struct Connection
 void to_json(nlohmann::json &j, const Connection &c);
 void from_json(const nlohmann::json &j, Connection &c);
 
-bool GetConnections(jack_client_t *client, jack_port_t *port, std::vector<Connection> &connections);
-bool SetConnections(jack_client_t *client, jack_port_t *port, std::vector<Connection> &connections, bool isInput);
+bool NewConnections(jack_client_t *client, jack_port_t *port, std::vector<std::string> &connection);
+bool GetConnections(jack_client_t *client, jack_port_t *port, std::vector<std::string> &connections);
+bool SetConnections(jack_client_t *client, jack_port_t *port, std::vector<std::string> &connections, bool isInput);
 } // namespace mck
