@@ -8,4 +8,11 @@ namespace mck {
     
     double LinToDb(double lin);
     double DbToLin(double db);
+
+    double Undenormal(double in);
+    float Undenormal(float in);
+
+    float CalcMeterLin(float *in, unsigned len);
+
+    float CalcMeterDb(float *in, unsigned len);
 }
