@@ -10,6 +10,15 @@ double mck::DbToLin(double db)
     db = db <= MIN_VALUE_LIN ? 0.0 : db;
     return db;
 }
+  double mck::DbToLog(double db, double min, double max) {
+    db = std::max(min, std::min(max, db));
+    return std::pow((db - min) / (max - min), 2.0);
+  }
+
+  double mck::LogToDb(double val, double min, double max) {
+    double db = std::sqrt(val) * (max - min) + min;
+    return std::max(-200.0, db);
+  }
 double mck::Undenormal(double in)
 {
     if (std::fpclassify(in) != FP_NORMAL && std::fpclassify(in) != FP_ZERO)
