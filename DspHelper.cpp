@@ -1,4 +1,4 @@
-#include "DspHelper.h"
+#include "DspHelper.hpp"
 
 double mck::LinToDb(double lin)
 {

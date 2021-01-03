@@ -1,4 +1,4 @@
-#include "JackHelper.h"
+#include "JackHelper.hpp"
 
 void mck::to_json(nlohmann::json &j, const Connection &c)
 {
