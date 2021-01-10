@@ -43,6 +43,14 @@ mck::Transport::Transport()
 {
 }
 
+mck::Transport::~Transport()
+{
+    if (m_isInitialized)
+    {
+        m_cmd = TC_STOP;
+    }
+}
+
 bool mck::Transport::Init(unsigned samplerate, unsigned buffersize, double tempo)
 {
     if (m_isInitialized)

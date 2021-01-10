@@ -73,7 +73,7 @@ namespace mck
         };
 
         Transport();
-        ~Transport(){};
+        ~Transport();
         bool Init(unsigned samplerate, unsigned buffersize, double tempo);
         void Process(jack_port_t *port, jack_nframes_t nframes, TransportState &ts);
 
