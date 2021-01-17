@@ -1,17 +1,19 @@
 #include "Transport.hpp"
 
-
 // TRANSPORT COMMAND
-void mck::to_json(nlohmann::json &j, const TransportCommand &t) {
+void mck::to_json(nlohmann::json &j, const TransportCommand &t)
+{
     j["mode"] = t.mode;
     j["tempo"] = t.tempo;
 }
-void mck::from_json(const nlohmann::json &j, TransportCommand &t) {
+void mck::from_json(const nlohmann::json &j, TransportCommand &t)
+{
     t.mode = j.at("mode").get<char>();
     t.tempo = j.at("tempo").get<double>();
 }
 // TRANSPORT STATE
-void mck::to_json(nlohmann::json &j, const TransportState &t) {
+void mck::to_json(nlohmann::json &j, const TransportState &t)
+{
     j["state"] = t.state;
     j["tempo"] = t.tempo;
     j["pulseIdx"] = t.pulseIdx;
@@ -24,7 +26,8 @@ void mck::to_json(nlohmann::json &j, const TransportState &t) {
     j["bar"] = t.bar;
     j["barLen"] = t.barLen;
 }
-void mck::from_json(const nlohmann::json &j, TransportState &t) {
+void mck::from_json(const nlohmann::json &j, TransportState &t)
+{
     t.state = j.at("state").get<char>();
     t.tempo = j.at("tempo").get<double>();
     t.pulseIdx = j.at("pulseIdx").get<unsigned>();
@@ -39,7 +42,20 @@ void mck::from_json(const nlohmann::json &j, TransportState &t) {
 }
 
 mck::Transport::Transport()
-    : m_isInitialized(false), m_buffersize(0), m_samplerate(0), m_lastPulse(0), m_numPulses(24), m_beatsPerBar(4), m_bar(0), m_beat(0), m_beatOffset(0), m_nextPulse(0), m_update(false), m_idx(0), m_state(TS_IDLE), m_cmd(TC_NOTHING)
+    : m_isInitialized(false),
+      m_buffersize(0),
+      m_samplerate(0),
+      m_lastPulse(0),
+      m_numPulses(24),
+      m_beatsPerBar(4),
+      m_bar(0),
+      m_beat(0),
+      m_beatOffset(0),
+      m_nextPulse(0),
+      m_update(false),
+      m_idx(0),
+      m_state(TS_IDLE),
+      m_cmd(TC_NOTHING)
 {
 }
 
@@ -155,7 +171,8 @@ void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, Transpor
             }
         }
 
-        if (pulseSet == false) {
+        if (pulseSet == false)
+        {
             m_lastPulse += m_buffersize;
         }
     }
@@ -170,6 +187,7 @@ void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, Transpor
     ts.beatLen = ts.pulseLen * ts.nPulses;
     ts.bar = m_bar.load();
     ts.barLen = ts.beatLen * ts.nBeats;
+    ts.tempo = m_tempo.load();
 
     m_state = state;
 }
@@ -218,6 +236,9 @@ bool mck::Transport::GetRTData(TransportState &rt)
     rt.beat = m_beat;
     rt.state = m_state.load();
     rt.nBeats = m_beatsPerBar;
+    rt.nPulses = m_numPulses;
+    rt.pulse = m_pulse;
+    rt.pulseIdx = m_lastPulse;
     rt.tempo = m_tempo.load();
 
     return true;
