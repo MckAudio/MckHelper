@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 #include <jack/jack.h>
 #include <jack/midiport.h>
+#include <jack/transport.h>
 #include <atomic>
 
 namespace mck
@@ -74,12 +75,14 @@ namespace mck
 
         Transport();
         ~Transport();
-        bool Init(unsigned samplerate, unsigned buffersize, double tempo);
-        void Process(jack_port_t *port, jack_nframes_t nframes, TransportState &ts);
+        bool Init(jack_client_t *client, double tempo);
+        void Process(jack_port_t *port, jack_nframes_t nframes, TransportState &ts, jack_client_t *client = nullptr);
 
         bool ApplyCommand(TransportCommand &cmd);
         bool GetRTData(TransportState &rt);
         bool GetBeat(Beat &b);
+
+        void SetJackTransport(bool enable, bool master);
 
     private:
         void CalcData(double tempo);
@@ -106,5 +109,11 @@ namespace mck
         //double m_bpm;
 
         unsigned m_nextPulse; // Samples till next pulse
+
+        jack_client_t *m_jackClient;
+        std::atomic<bool> m_useJackTransport;
+        std::atomic<bool> m_isJackTransportMaster;
+        bool m_jackTransportMasterSet;
+        jack_transport_state_t m_oldJackState;
     };
 }; // namespace mck

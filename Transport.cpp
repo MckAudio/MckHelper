@@ -55,7 +55,11 @@ mck::Transport::Transport()
       m_update(false),
       m_idx(0),
       m_state(TS_IDLE),
-      m_cmd(TC_NOTHING)
+      m_cmd(TC_NOTHING),
+      m_useJackTransport(false),
+      m_isJackTransportMaster(false),
+      m_jackTransportMasterSet(false),
+      m_oldJackState(JackTransportStopped)
 {
 }
 
@@ -67,15 +71,20 @@ mck::Transport::~Transport()
     }
 }
 
-bool mck::Transport::Init(unsigned samplerate, unsigned buffersize, double tempo)
+bool mck::Transport::Init(jack_client_t *client, double tempo)
 {
     if (m_isInitialized)
     {
         return false;
     }
 
-    m_buffersize = buffersize;
-    m_samplerate = samplerate;
+    if (client == nullptr)
+    {
+        return false;
+    }
+
+    m_buffersize = jack_get_buffer_size(client);
+    m_samplerate = jack_get_sample_rate(client);
 
     CalcData(tempo);
 
@@ -83,7 +92,7 @@ bool mck::Transport::Init(unsigned samplerate, unsigned buffersize, double tempo
     return true;
 }
 
-void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, TransportState &ts)
+void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, TransportState &ts, jack_client_t *client)
 {
     if (m_isInitialized == false)
     {
@@ -97,6 +106,52 @@ void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, Transpor
     unsigned char *buffer;
     void *outBuffer = jack_port_get_buffer(port, nframes);
     jack_midi_clear_buffer(outBuffer);
+
+    jack_position_t jackPos;
+    jack_transport_state_t jackState = JackTransportStopped;
+    if (client != nullptr)
+    {
+        jackState = jack_transport_query(client, &jackPos);
+
+        if (jackState != m_oldJackState)
+        {
+            switch (jackState)
+            {
+            case JackTransportStopped:
+                cmd = TC_STOP;
+                break;
+            case JackTransportRolling:
+                cmd = TC_START;
+                break;
+            default:
+                cmd = TC_NOTHING;
+                break;
+            }
+            m_cmd = TC_NOTHING;
+            m_oldJackState = jackState;
+        }
+        else
+        {
+            switch (cmd)
+            {
+            case TC_START: {
+                jack_position_t newPos = jackPos;
+                newPos.frame = 0;
+                jack_transport_reposition(client, &newPos);
+                jack_transport_start(client);
+                break;
+            }
+            case TC_CONTINUE:
+                jack_transport_start(client);
+                break;
+            case TC_STOP:
+                jack_transport_stop(client);
+                break;
+            default:
+                break;
+            }
+        }
+    }
 
     switch (cmd)
     {
@@ -255,6 +310,23 @@ bool mck::Transport::GetBeat(Beat &b)
     b.off = m_beatOffset;
 
     return true;
+}
+
+void mck::Transport::SetJackTransport(bool enable, bool master)
+{
+    if (enable && master)
+    {
+        if (m_jackTransportMasterSet == false) { 
+            // Set Transport Master 
+        }
+    } else if (m_jackTransportMasterSet) {
+        // Release Transport Master
+    }
+
+    m_useJackTransport = enable;
+    m_isJackTransportMaster = enable && master;
+
+    return;
 }
 
 void mck::Transport::CalcData(double tempo)
