@@ -10,17 +10,27 @@ namespace mck
 {
     enum TransCmdType
     {
-        TC_NOTHING,
+        TC_NOTHING = 0,
         TC_STOP,
         TC_START,
         TC_CONTINUE,
         TC_TEMPO,
+        TC_BYPASS_JACK,
+        TC_FOLLOW_JACK,
+        TC_LEAD_JACK,
         TC_LENGTH
+    };
+
+    enum TransJackTransport
+    {
+        TJ_BYPASS_JACK = 0,
+        TJ_FOLLOW_JACK,
+        TJ_LEAD_JACK
     };
 
     enum TransState
     {
-        TS_IDLE,
+        TS_IDLE = 0,
         TS_RUNNING,
         TS_PAUSING,
         TS_LENGTH
@@ -48,8 +58,8 @@ namespace mck
         unsigned beatLen; // samples per beat
         unsigned bar;
         unsigned barLen; // samples per bar
-
-        TransportState() : state(TS_IDLE), tempo(0.0), pulse(0), nPulses(0), pulseLen(0), beat(0), nBeats(0), beatLen(0), bar(0), barLen(0) {}
+        char jackTransport;
+        TransportState() : state(TS_IDLE), tempo(0.0), pulse(0), nPulses(0), pulseLen(0), beat(0), nBeats(0), beatLen(0), bar(0), barLen(0), jackTransport(TJ_BYPASS_JACK) {}
     };
     void to_json(nlohmann::json &j, const TransportState &t);
     void from_json(const nlohmann::json &j, TransportState &t);
@@ -76,15 +86,15 @@ namespace mck
         Transport();
         ~Transport();
         bool Init(jack_client_t *client, double tempo);
-        void Process(jack_port_t *port, jack_nframes_t nframes, TransportState &ts, jack_client_t *client = nullptr);
-
+        void Process(jack_port_t *port, jack_nframes_t nframes, TransportState &ts);
+        void ProcessTimebase(jack_transport_state_t state, jack_nframes_t nframes, jack_position_t *pos, int newPos);
         bool ApplyCommand(TransportCommand &cmd);
         bool GetRTData(TransportState &rt);
         bool GetBeat(Beat &b);
 
-        void SetJackTransport(bool enable, bool master);
 
     private:
+        void SetJackTransport(bool enable, bool master);
         void CalcData(double tempo);
 
         bool m_isInitialized;

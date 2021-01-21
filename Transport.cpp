@@ -25,6 +25,7 @@ void mck::to_json(nlohmann::json &j, const TransportState &t)
     j["beatLen"] = t.beatLen;
     j["bar"] = t.bar;
     j["barLen"] = t.barLen;
+    j["jackTransport"] = t.jackTransport;
 }
 void mck::from_json(const nlohmann::json &j, TransportState &t)
 {
@@ -39,6 +40,13 @@ void mck::from_json(const nlohmann::json &j, TransportState &t)
     t.beatLen = j.at("beatLen").get<unsigned>();
     t.bar = j.at("bar").get<unsigned>();
     t.barLen = j.at("barLen").get<unsigned>();
+    t.jackTransport = j.at("jackTransport").get<char>();
+}
+
+static void JackTimebase(jack_transport_state_t state, jack_nframes_t nframes, jack_position_t *pos, int newPos, void *arg)
+{
+    mck::Transport *transport = (mck::Transport *)arg;
+    transport->ProcessTimebase(state, nframes, pos, newPos);
 }
 
 mck::Transport::Transport()
@@ -88,16 +96,20 @@ bool mck::Transport::Init(jack_client_t *client, double tempo)
 
     CalcData(tempo);
 
+    m_jackClient = client;
     m_isInitialized = true;
     return true;
 }
 
-void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, TransportState &ts, jack_client_t *client)
+void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, TransportState &ts)
 {
     if (m_isInitialized == false)
     {
         return;
     }
+
+    bool useJack = m_useJackTransport.load();
+    bool leadJack = m_isJackTransportMaster.load();
 
     char state = m_state.load();
     char cmd = m_cmd.load();
@@ -109,10 +121,10 @@ void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, Transpor
 
     jack_position_t jackPos;
     jack_transport_state_t jackState = JackTransportStopped;
-    if (client != nullptr)
+    if (useJack && leadJack == false && m_jackClient != nullptr)
     {
-        jackState = jack_transport_query(client, &jackPos);
-
+        jackState = jack_transport_query(m_jackClient, &jackPos);
+    
         if (jackState != m_oldJackState)
         {
             switch (jackState)
@@ -134,18 +146,19 @@ void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, Transpor
         {
             switch (cmd)
             {
-            case TC_START: {
+            case TC_START:
+            {
                 jack_position_t newPos = jackPos;
                 newPos.frame = 0;
-                jack_transport_reposition(client, &newPos);
-                jack_transport_start(client);
+                jack_transport_reposition(m_jackClient, &newPos);
+                jack_transport_start(m_jackClient);
                 break;
             }
             case TC_CONTINUE:
-                jack_transport_start(client);
+                jack_transport_start(m_jackClient);
                 break;
             case TC_STOP:
-                jack_transport_stop(client);
+                jack_transport_stop(m_jackClient);
                 break;
             default:
                 break;
@@ -244,7 +257,35 @@ void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, Transpor
     ts.barLen = ts.beatLen * ts.nBeats;
     ts.tempo = m_tempo.load();
 
+    ts.jackTransport = char(useJack) + char(leadJack);
+
     m_state = state;
+}
+
+void mck::Transport::ProcessTimebase(jack_transport_state_t state, jack_nframes_t nframes, jack_position_t *pos, int newPos)
+{
+    if (newPos)
+    {
+        switch (state)
+        {
+        case JackTransportStopped:
+            break;
+        case JackTransportStarting:
+            break;
+        case JackTransportRolling:
+            break;
+        }
+    }
+
+    pos->bar = 1;
+    pos->beat = 2;
+    pos->tick = 54;
+    pos->bar_start_tick = 42.0;
+    pos->beats_per_bar = 4.0f;
+    pos->beat_type = 4.0f;
+    pos->ticks_per_beat = 128.0;
+    pos->beats_per_minute = m_tempo.load();
+    pos->valid = JackPositionBBT;
 }
 
 bool mck::Transport::ApplyCommand(TransportCommand &cmd)
@@ -256,29 +297,39 @@ bool mck::Transport::ApplyCommand(TransportCommand &cmd)
         if (state == TS_RUNNING)
         {
             m_cmd = TC_STOP;
-            return true;
+            break;
         }
         break;
     case TC_START:
         if (state == TS_IDLE)
         {
             m_cmd = TC_START;
-            return true;
+            break;
         }
         break;
     case TC_CONTINUE:
         if (state == TS_IDLE)
         {
             m_cmd = TC_CONTINUE;
-            return true;
+            break;
         }
         break;
     case TC_TEMPO:
         CalcData(cmd.tempo);
-        return true;
         break;
+    case TC_BYPASS_JACK:
+        SetJackTransport(false, false);
+        break;
+    case TC_FOLLOW_JACK:
+        SetJackTransport(true, false);
+        break;
+    case TC_LEAD_JACK:
+        SetJackTransport(true, true);
+        break;
+    default:
+        return false;
     }
-    return false;
+    return true;
 }
 
 bool mck::Transport::GetRTData(TransportState &rt)
@@ -316,11 +367,31 @@ void mck::Transport::SetJackTransport(bool enable, bool master)
 {
     if (enable && master)
     {
-        if (m_jackTransportMasterSet == false) { 
-            // Set Transport Master 
+        if (m_jackTransportMasterSet == false)
+        {
+            // Set Transport Master
+            // Set conditional to not overwrite a current master like ardour
+            if (jack_set_timebase_callback(m_jackClient, 1, JackTimebase, this) == 0)
+            {
+                m_jackTransportMasterSet = true;
+            }
+            else
+            {
+                master = false;
+            }
         }
-    } else if (m_jackTransportMasterSet) {
+    }
+    else if (m_jackTransportMasterSet)
+    {
         // Release Transport Master
+        if (jack_release_timebase(m_jackClient) == 0)
+        {
+            m_jackTransportMasterSet = false;
+        }
+        else
+        {
+            master = true;
+        }
     }
 
     m_useJackTransport = enable;
