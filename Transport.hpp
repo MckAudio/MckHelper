@@ -104,6 +104,7 @@ namespace mck
         std::atomic<char> m_idx;
         std::atomic<bool> m_update;
         Data m_data[2];
+        TransportState m_transportState;
 
         unsigned m_lastPulse;
         unsigned m_beat;                  // 0 -> m_beatsPerBar - 1

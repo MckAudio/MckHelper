@@ -121,10 +121,15 @@ void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, Transpor
 
     jack_position_t jackPos;
     jack_transport_state_t jackState = JackTransportStopped;
-    if (useJack && leadJack == false && m_jackClient != nullptr)
+    if (useJack && m_jackClient != nullptr)
     {
         jackState = jack_transport_query(m_jackClient, &jackPos);
-    
+
+        if (jackPos.valid & JackPositionBBT)
+        {
+            m_tempo = jackPos.beats_per_minute;
+        }
+
         if (jackState != m_oldJackState)
         {
             switch (jackState)
@@ -256,8 +261,9 @@ void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, Transpor
     ts.bar = m_bar.load();
     ts.barLen = ts.beatLen * ts.nBeats;
     ts.tempo = m_tempo.load();
-
     ts.jackTransport = char(useJack) + char(leadJack);
+
+    m_transportState = ts;
 
     m_state = state;
 }
@@ -277,14 +283,13 @@ void mck::Transport::ProcessTimebase(jack_transport_state_t state, jack_nframes_
         }
     }
 
-    pos->bar = 1;
-    pos->beat = 2;
-    pos->tick = 54;
-    pos->bar_start_tick = 42.0;
-    pos->beats_per_bar = 4.0f;
-    pos->beat_type = 4.0f;
-    pos->ticks_per_beat = 128.0;
-    pos->beats_per_minute = m_tempo.load();
+    pos->bar = m_transportState.bar + 1;
+    pos->beats_per_bar = m_transportState.barLen;
+    pos->beat = m_transportState.beat + 1;
+    pos->beat_type = 4;
+    pos->beats_per_minute = m_transportState.tempo;
+    pos->tick = m_transportState.pulse + 1;
+    pos->ticks_per_beat = m_transportState.nPulses;
     pos->valid = JackPositionBBT;
 }
 
@@ -367,31 +372,17 @@ void mck::Transport::SetJackTransport(bool enable, bool master)
 {
     if (enable && master)
     {
-        if (m_jackTransportMasterSet == false)
-        {
             // Set Transport Master
             // Set conditional to not overwrite a current master like ardour
-            if (jack_set_timebase_callback(m_jackClient, 1, JackTimebase, this) == 0)
-            {
-                m_jackTransportMasterSet = true;
-            }
-            else
+            if (jack_set_timebase_callback(m_jackClient, 1, JackTimebase, this) != 0)
             {
                 master = false;
             }
-        }
     }
-    else if (m_jackTransportMasterSet)
+    else
     {
         // Release Transport Master
-        if (jack_release_timebase(m_jackClient) == 0)
-        {
-            m_jackTransportMasterSet = false;
-        }
-        else
-        {
-            master = true;
-        }
+        jack_release_timebase(m_jackClient);
     }
 
     m_useJackTransport = enable;
