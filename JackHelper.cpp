@@ -1,15 +1,6 @@
 #include "JackHelper.hpp"
 
-void mck::to_json(nlohmann::json &j, const Connection &c)
-{
-    j["name"] = c.name;
-}
-void mck::from_json(const nlohmann::json &j, Connection &c)
-{
-    c.name = j.at("name").get<std::string>();
-}
-
-bool mck::GetInputPorts(jack_client_t *client, std::vector<std::string> &connection)
+bool mck::jack::GetInputPorts(jack_client_t *client, std::vector<std::string> &connection)
 {
     connection.clear();
     const char *type = "audio";
@@ -30,7 +21,7 @@ bool mck::GetInputPorts(jack_client_t *client, std::vector<std::string> &connect
     return true;
 }
 
-bool mck::GetOutputPorts(jack_client_t *client, std::vector<std::string> &connection)
+bool mck::jack::GetOutputPorts(jack_client_t *client, std::vector<std::string> &connection)
 {
     connection.clear();
     const char *type = "audio";
@@ -50,7 +41,7 @@ bool mck::GetOutputPorts(jack_client_t *client, std::vector<std::string> &connec
     return true;
 }
 
-bool mck::NewConnections(jack_client_t *client, jack_port_t *port, std::vector<std::string> &connections)
+bool mck::jack::NewConnections(jack_client_t *client, jack_port_t *port, std::vector<std::string> &connections)
 {
     std::vector<std::string> tmp;
     if (client == nullptr || port == nullptr)
@@ -85,7 +76,7 @@ bool mck::NewConnections(jack_client_t *client, jack_port_t *port, std::vector<s
 
     return false;
 }
-bool mck::GetConnections(jack_client_t *client, jack_port_t *port, std::vector<std::string> &connections)
+bool mck::jack::GetConnections(jack_client_t *client, jack_port_t *port, std::vector<std::string> &connections)
 {
     connections.clear();
 
@@ -107,7 +98,7 @@ bool mck::GetConnections(jack_client_t *client, jack_port_t *port, std::vector<s
     return true;
 }
 
-bool mck::SetConnection(jack_client_t *client, jack_port_t *port, std::string &connection, bool isInput)
+bool mck::jack::SetConnection(jack_client_t *client, jack_port_t *port, std::string &connection, bool isInput)
 {
     if (client == nullptr || port == nullptr)
     {
@@ -161,7 +152,7 @@ bool mck::SetConnection(jack_client_t *client, jack_port_t *port, std::string &c
     return ret;
 }
 
-bool mck::SetConnections(jack_client_t *client, jack_port_t *port, std::vector<std::string> &connections, bool isInput)
+bool mck::jack::SetConnections(jack_client_t *client, jack_port_t *port, std::vector<std::string> &connections, bool isInput)
 {
     if (client == nullptr || port == nullptr)
     {
