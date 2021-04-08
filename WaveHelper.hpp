@@ -15,6 +15,8 @@ namespace mck
         unsigned numChans;
         unsigned lengthMs;
         unsigned lengthSamps;
+        std::string name;
+        std::string relPath;
         std::string path;
         WaveInfo()
             : valid(false),
@@ -24,9 +26,9 @@ namespace mck
               numChans(1),
               lengthMs(0),
               lengthSamps(0),
-              path("")
-        {
-        }
+              name(""),
+              relPath(""),
+              path(""){}
     };
     void to_json(nlohmann::json &j, const WaveInfo &w);
     void from_json(const nlohmann::json &j, WaveInfo &w);
@@ -41,6 +43,8 @@ namespace mck
         unsigned numChans;
         unsigned lengthMs;
         unsigned lengthSamps;
+        std::string name;
+        std::string relPath;
         std::string path;
         std::vector<std::vector<float>> waveForm;
         unsigned waveResolutionUs;
@@ -52,24 +56,17 @@ namespace mck
               numChans(1),
               lengthMs(0),
               lengthSamps(0),
+              name(""),
+              relPath(""),
               path(""),
               waveForm(),
               waveResolutionUs(500) {}
-        WaveInfoDetail(WaveInfo &w)
-            : valid(w.valid),
-              packIdx(w.packIdx),
-              sampleIdx(w.sampleIdx),
-              sampleRate(w.sampleRate),
-              numChans(w.numChans),
-              lengthMs(w.lengthMs),
-              lengthSamps(w.lengthSamps),
-              path(w.path),
-              waveForm(),
-              waveResolutionUs(500) {}
-        //WaveInfoDetail &operator=(const WaveInfoDetail &w);
     };
     void to_json(nlohmann::json &j, const WaveInfoDetail &w);
     void from_json(const nlohmann::json &j, WaveInfoDetail &w);
+
+    WaveInfo ConvertWaveInfo(WaveInfoDetail &w);
+    WaveInfoDetail ConvertWaveInfo(WaveInfo &w);
 
     namespace helper
     {

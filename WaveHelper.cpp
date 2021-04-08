@@ -30,7 +30,9 @@ void mck::to_json(nlohmann::json &j, const WaveInfo &w)
     j["numChans"] = w.numChans;
     j["lengthMs"] = w.lengthMs;
     j["lengthSamps"] = w.lengthSamps;
+    j["name"] = w.name;
     j["path"] = w.path;
+    j["relPath"] = w.relPath;
 }
 void mck::from_json(const nlohmann::json &j, WaveInfo &w)
 {
@@ -41,7 +43,9 @@ void mck::from_json(const nlohmann::json &j, WaveInfo &w)
     w.numChans = j.at("numChans").get<unsigned>();
     w.lengthMs = j.at("lengthMs").get<unsigned>();
     w.lengthSamps = j.at("lengthSamps").get<unsigned>();
+    w.name = j.at("name").get<std::string>();
     w.path = j.at("path").get<std::string>();
+    w.relPath = j.at("relPath").get<std::string>();
 }
 /*
 mck::WaveInfoDetail &mck::WaveInfoDetail::operator=(const WaveInfoDetail &w)
@@ -65,7 +69,9 @@ void mck::to_json(nlohmann::json &j, const WaveInfoDetail &w)
     j["numChans"] = w.numChans;
     j["lengthMs"] = w.lengthMs;
     j["lengthSamps"] = w.lengthSamps;
+    j["name"] = w.name;
     j["path"] = w.path;
+    j["relPath"] = w.relPath;
     j["waveForm"] = w.waveForm;
     j["waveResolutionUs"] = w.waveResolutionUs;
 }
@@ -78,9 +84,46 @@ void mck::from_json(const nlohmann::json &j, WaveInfoDetail &w)
     w.numChans = j.at("numChans").get<unsigned>();
     w.lengthMs = j.at("lengthMs").get<unsigned>();
     w.lengthSamps = j.at("lengthSamps").get<unsigned>();
+    w.name = j.at("name").get<std::string>();
     w.path = j.at("path").get<std::string>();
+    w.relPath = j.at("relPath").get<std::string>();
     w.waveForm = j.at("waveForm").get<std::vector<std::vector<float>>>();
     w.waveResolutionUs = j.at("waveResolutionUs").get<unsigned>();
+}
+
+mck::WaveInfo mck::ConvertWaveInfo(WaveInfoDetail &w)
+{
+    WaveInfo r;
+    r.valid = w.valid;
+    r.packIdx = w.packIdx;
+    r.sampleIdx = w.sampleIdx;
+    r.sampleRate = w.sampleRate;
+    r.numChans = w.numChans;
+    r.lengthMs = w.lengthMs;
+    r.lengthSamps = w.lengthSamps;
+    r.name = w.name;
+    r.path = w.path;
+    r.relPath = w.relPath;
+
+    return r;
+}
+mck::WaveInfoDetail mck::ConvertWaveInfo(WaveInfo &w)
+{
+    WaveInfoDetail r;
+    r.valid = w.valid;
+    r.packIdx = w.packIdx;
+    r.sampleIdx = w.sampleIdx;
+    r.sampleRate = w.sampleRate;
+    r.numChans = w.numChans;
+    r.lengthMs = w.lengthMs;
+    r.lengthSamps = w.lengthSamps;
+    r.name = w.name;
+    r.path = w.path;
+    r.relPath = w.relPath;
+    r.waveForm.clear();
+    r.waveResolutionUs = 500;
+
+    return r;
 }
 
 mck::WaveInfo mck::helper::ImportWaveFile(std::string path, unsigned sampleRate, std::vector<std::vector<float>> &output)
@@ -168,14 +211,14 @@ mck::WaveInfo mck::helper::ImportWaveFile(std::string path, unsigned sampleRate,
 }
 mck::WaveInfoDetail mck::helper::ImportWaveForm(std::string path, unsigned sampleRate, std::vector<std::vector<float>> &output, unsigned resolutionUs)
 {
-    mck::WaveInfoDetail info;
+    WaveInfoDetail info;
     if (resolutionUs < 100 || resolutionUs > 10e6)
     {
         return info;
     }
 
-    mck::WaveInfo tmpInfo = ImportWaveFile(path, sampleRate, output);
-    info = mck::WaveInfoDetail(tmpInfo);
+    WaveInfo tmpInfo = ImportWaveFile(path, sampleRate, output);
+    info = ConvertWaveInfo(tmpInfo);
     if (info.valid == false)
     {
         return info;
