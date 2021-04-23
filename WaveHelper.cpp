@@ -183,7 +183,7 @@ mck::WaveInfo mck::helper::ImportWaveFile(std::string path, unsigned sampleRate,
         free(buffer);
         buffer = tmpSrcBuf;
     }
-    info.lengthMs = (unsigned)std::floor(1000.0 * (double)info.lengthSamps / (double)info.sampleRate);
+    info.lengthMs = (unsigned)std::floor(1000.0 * (double)info.lengthSamps / (double)sampleRate);
 
     // Resize Output Buffer
     output.clear();
@@ -226,7 +226,7 @@ mck::WaveInfoDetail mck::helper::ImportWaveForm(std::string path, unsigned sampl
     // 500us
     double divider = (double)10e6 / (double)resolutionUs;
     unsigned sampsPerMs = (unsigned)std::ceil((double)info.sampleRate / divider);
-    unsigned lengthMs = (unsigned)std::floor(divider * (double)info.lengthSamps / (double)info.sampleRate);
+    unsigned lengthMs = (unsigned)std::floor(divider * (double)info.lengthSamps / (double)sampleRate);
 
     // Read Waveform
     info.waveForm.resize(info.numChans);
