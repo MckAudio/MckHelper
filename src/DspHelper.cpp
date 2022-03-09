@@ -1,5 +1,14 @@
 #include "DspHelper.hpp"
 
+#include <cmath>
+
+
+double mck::RoundValue(double value, int numberOfPlaces)
+{
+    double mult = std::pow(10.0, numberOfPlaces);
+    return std::round(value * mult) / mult;
+}
+
 double mck::LinToDb(double lin)
 {
     return std::max(MIN_VALUE_DB, 20.0 * std::log10(lin));
