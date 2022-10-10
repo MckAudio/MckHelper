@@ -1,4 +1,4 @@
-#include "JackHelper.hpp"
+#include <MckHelper/JackHelper.hpp>
 
 bool mck::jack::GetInputPorts(jack_client_t *client, std::vector<std::string> &connection)
 {

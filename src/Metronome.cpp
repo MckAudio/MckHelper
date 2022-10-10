@@ -1,4 +1,4 @@
-#include "Metronome.hpp"
+#include <MckHelper/Metronome.hpp>
 #include <cstdio>
 
 mck::Metronome::Metronome() : m_tempo(120.0f), m_initialized(false), m_isRunning(false), m_clkSet(false), m_clkLen(24), m_clkCount(0), m_clkIdx(0), m_clkBuf(0), m_print(false), m_numBeats(4), m_sampleIdx(0), m_startIdx(0), m_start(false)

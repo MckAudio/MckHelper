@@ -1,4 +1,4 @@
-#include "WaveHelper.hpp"
+#include <MckHelper/WaveHelper.hpp>
 #include <filesystem>
 #include <sndfile.h>
 #include <samplerate.h>
