@@ -8,6 +8,8 @@ find_library(SNDFILE sndfile)
 find_library(SAMPLERATE samplerate)
 find_library(JACK jack)
 
+add_subdirectory(deps/json)
+
 target_include_directories(MckHelper
     PRIVATE
     ./include
@@ -24,6 +26,7 @@ target_sources(MckHelper
 
 target_link_libraries(MckHelper
     PRIVATE
+    nlohmann_json
     jack
     sndfile
     samplerate
