@@ -1,8 +1,9 @@
 #include <MckHelper/DspHelper.hpp>
+#include <cmath>
 
 double mck::LinToDb(double lin)
 {
-    return std::max(MIN_VALUE_DB, 20.0 * std::log10(lin));
+    return std::fmax(MIN_VALUE_DB, 20.0 * std::log10(lin));
 }
 double mck::DbToLin(double db)
 {
@@ -11,13 +12,13 @@ double mck::DbToLin(double db)
     return db;
 }
   double mck::DbToLog(double db, double min, double max) {
-    db = std::max(min, std::min(max, db));
+    db = std::fmax(min, std::fmin(max, db));
     return std::pow((db - min) / (max - min), 2.0);
   }
 
   double mck::LogToDb(double val, double min, double max) {
     double db = std::sqrt(val) * (max - min) + min;
-    return std::max(-200.0, db);
+    return std::fmax(-200.0, db);
   }
 double mck::Undenormal(double in)
 {
