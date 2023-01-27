@@ -78,7 +78,7 @@ mck::Transport::~Transport()
         m_cmd = TC_STOP;
     }
 }
-
+#ifdef USE_JACK
 bool mck::Transport::Init(jack_client_t *client, double tempo)
 {
     if (m_isInitialized)
@@ -100,6 +100,24 @@ bool mck::Transport::Init(jack_client_t *client, double tempo)
     m_isInitialized = true;
     return true;
 }
+#else
+bool mck::Transport::Init(double tempo, unsigned sampleRate, unsigned blockSize)
+{
+    if (m_isInitialized)
+    {
+        m_cmd = TC_STOP;
+    }
+
+    m_buffersize = blockSize;
+    m_samplerate = sampleRate;
+
+    CalcData(tempo);
+
+    m_jackClient = nullptr;
+    m_isInitialized = true;
+    return true;
+}
+#endif
 
 void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, TransportState &ts)
 {
@@ -116,9 +134,9 @@ void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, Transpor
     unsigned pulseLen = m_pulseLen.load();
 
     unsigned char *buffer;
+#ifdef USE_JACK
     void *outBuffer = jack_port_get_buffer(port, nframes);
     jack_midi_clear_buffer(outBuffer);
-
     jack_position_t jackPos;
     jack_transport_state_t jackState = JackTransportStopped;
     if (useJack && m_jackClient != nullptr)
@@ -170,6 +188,7 @@ void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, Transpor
             }
         }
     }
+#endif
 
     switch (cmd)
     {
@@ -180,24 +199,29 @@ void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, Transpor
         m_nextPulse = 0;
         state = TS_RUNNING;
         m_cmd = TC_NOTHING;
+#ifdef USE_JACK
         // Send MIDI clock command
         buffer = jack_midi_event_reserve(outBuffer, 0, 1);
         buffer[0] = 0xFA;
-
+#endif
         break;
     case TC_CONTINUE:
         state = TS_RUNNING;
         m_cmd = TC_NOTHING;
         // Send MIDI clock command
+#ifdef USE_JACK
         buffer = jack_midi_event_reserve(outBuffer, 0, 1);
         buffer[0] = 0xFB;
+#endif
         break;
     case TC_STOP:
         state = TS_IDLE;
         m_cmd = TC_NOTHING;
         // Send MIDI clock command
+#ifdef USE_JACK
         buffer = jack_midi_event_reserve(outBuffer, 0, 1);
         buffer[0] = 0xFC;
+#endif
         break;
     default:
         break;
@@ -230,9 +254,11 @@ void mck::Transport::Process(jack_port_t *port, jack_nframes_t nframes, Transpor
                         m_bar = m_bar.load() + 1;
                     }
                 }
+#ifdef USE_JACK
                 // Send MIDI clock
                 buffer = jack_midi_event_reserve(outBuffer, samp, 1);
                 buffer[0] = 0xF8;
+#endif
 
                 // Calc time to next pulse
                 m_nextPulse = samp + pulseLen;
@@ -370,20 +396,22 @@ bool mck::Transport::GetBeat(Beat &b)
 
 void mck::Transport::SetJackTransport(bool enable, bool master)
 {
+#ifdef USE_JACK
     if (enable && master)
     {
-            // Set Transport Master
-            // Set conditional to not overwrite a current master like ardour
-            if (jack_set_timebase_callback(m_jackClient, 1, JackTimebase, this) != 0)
-            {
-                master = false;
-            }
+        // Set Transport Master
+        // Set conditional to not overwrite a current master like ardour
+        if (jack_set_timebase_callback(m_jackClient, 1, JackTimebase, this) != 0)
+        {
+            master = false;
+        }
     }
     else
     {
         // Release Transport Master
         jack_release_timebase(m_jackClient);
     }
+#endif
 
     m_useJackTransport = enable;
     m_isJackTransportMaster = enable && master;
