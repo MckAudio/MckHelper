@@ -158,10 +158,20 @@ bool mck::jack::SetConnections(jack_client_t *client, jack_port_t *port, std::ve
     {
         return false;
     }
-    if (jack_port_connected(port) > 0)
+
+    const char *portName = jack_port_name(port);
+
+    const char **cons = jack_port_get_all_connections(client, port);
+    if (cons)
     {
-        jack_port_disconnect(client, port);
+        const char **con = cons;
+        for (; *con; con++)
+        {
+            jack_disconnect(client, portName, *con);
+        }
+        jack_free(cons);
     }
+
     const char *name = jack_port_name(port);
     bool ret = true;
 

@@ -12,7 +12,7 @@ message(STATUS "Found jack:\t\t${JACK}")
 message(STATUS "Found sndfile:\t${SNDFILE}")
 message(STATUS "Found samplerate:\t${SAMPLERATE}")
 
-add_subdirectory(deps/json)
+target_compile_definitions(MckHelper PUBLIC "$<$<CONFIG:DEBUG>:DEBUG>")
 
 target_include_directories(MckHelper
     PRIVATE
@@ -32,7 +32,6 @@ target_sources(MckHelper
 
 target_link_libraries(MckHelper
     PRIVATE
-    nlohmann_json
     ${SNDFILE}
     ${SAMPLERATE}
     ${JACK}
