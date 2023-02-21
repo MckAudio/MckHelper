@@ -85,11 +85,7 @@ namespace mck
 
         Transport();
         ~Transport();
-    #ifdef USE_JACK
         bool Init(jack_client_t *client, double tempo);
-    #else
-        bool Init(double tempo, unsigned sampleRate, unsigned blockSize);
-    #endif
         void Process(jack_port_t *port, jack_nframes_t nframes, TransportState &ts);
         void ProcessTimebase(jack_transport_state_t state, jack_nframes_t nframes, jack_position_t *pos, int newPos);
         bool ApplyCommand(TransportCommand &cmd);
